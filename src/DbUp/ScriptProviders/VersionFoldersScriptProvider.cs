@@ -18,79 +18,81 @@ namespace DbUp.ScriptProviders
         private readonly Encoding encoding;
         private readonly Func<string, bool> filter;
         private readonly string targetVersion;
+        private FileSystemScriptOptions options;
 
         ///<param name="directoryPath">Path to SQL upgrade scripts</param>
-        public VersionFoldersScriptProvider(string directoryPath)
+        public VersionFoldersScriptProvider(string directoryPath) : 
+            this(directoryPath, null, new FileSystemScriptOptions())
         {
-            this.directoryPath = directoryPath;
-            this.filter = null;
-            this.encoding = Encoding.Default;
-            this.targetVersion = null;
         }
 
         ///<param name="directoryPath">Path to SQL upgrade scripts</param>
         ///<param name="targetVersion">Exclude scripts in subfolders with a higher version number.</param>
-        public VersionFoldersScriptProvider(string directoryPath, string targetVersion)
+        public VersionFoldersScriptProvider(string directoryPath, string targetVersion) :
+            this(directoryPath, targetVersion, new FileSystemScriptOptions())
         {
-            this.directoryPath = directoryPath;
-            this.filter = null;
-            this.encoding = Encoding.Default;
-            this.targetVersion = targetVersion;
         }
 
         ///<param name="directoryPath">Path to SQL upgrade scripts</param>
         ///<param name="filter">The filter.</param>
-        public VersionFoldersScriptProvider(string directoryPath, Func<string, bool> filter)
+        [Obsolete("Use the constructor with Options argument instead")]
+        public VersionFoldersScriptProvider(string directoryPath, Func<string, bool> filter) :
+            this(directoryPath, null, new FileSystemScriptOptions() { Filter = filter })
         {
-            this.directoryPath = directoryPath;
-            this.filter = filter;
-            this.encoding = Encoding.Default;
-            this.targetVersion = null;
         }
 
         ///<param name="directoryPath">Path to SQL upgrade scripts</param>
         ///<param name="encoding">The encoding.</param>
         ///<param name="targetVersion">Exclude scripts in subfolders with a higher version number.</param>
-        public VersionFoldersScriptProvider(string directoryPath, Encoding encoding, string targetVersion)
+        [Obsolete("Use the constructor with Options argument instead")]
+        public VersionFoldersScriptProvider(string directoryPath, Encoding encoding, string targetVersion) :
+            this(directoryPath, targetVersion, new FileSystemScriptOptions() { Encoding = encoding })
         {
-            this.directoryPath = directoryPath;
-            this.filter = null;
-            this.encoding = encoding;
-            this.targetVersion = targetVersion;
         }
 
         ///<param name="directoryPath">Path to SQL upgrade scripts</param>
         ///<param name="encoding">The encoding.</param>
-        ///<param name="targetVersion">Exclude scripts in subfolders with a higher version number.</param>
-        public VersionFoldersScriptProvider(string directoryPath, Encoding encoding, Func<string, bool> filter)
+        ///<param name="filter">The filter.</param>
+        [Obsolete("Use the constructor with Options argument instead")]
+        public VersionFoldersScriptProvider(string directoryPath, Encoding encoding, Func<string, bool> filter) :
+            this(directoryPath, null, new FileSystemScriptOptions() { Filter = filter })
         {
-            this.directoryPath = directoryPath;
-            this.filter = filter;
-            this.encoding = encoding;
-            this.targetVersion = null;
         }
 
         ///<param name="directoryPath">Path to SQL upgrade scripts</param>
         ///<param name="filter">The filter.</param>
         ///<param name="targetVersion">Exclude scripts in subfolders with a higher version number.</param>
-        public VersionFoldersScriptProvider(string directoryPath, Func<string, bool> filter, string targetVersion)
+        [Obsolete("Use the constructor with Options argument instead")]
+        public VersionFoldersScriptProvider(string directoryPath, Func<string, bool> filter, string targetVersion) :
+            this(directoryPath, targetVersion, new FileSystemScriptOptions() { Filter = filter })
         {
-            this.directoryPath = directoryPath;
-            this.filter = filter;
-            this.encoding = Encoding.Default;
-            this.targetVersion = targetVersion;
         }
 
         ///<param name="directoryPath">Path to SQL upgrade scripts</param>
         ///<param name="encoding">The encoding.</param>
         ///<param name="filter">The filter.</param>
         ///<param name="targetVersion">Exclude scripts in subfolders with a higher version number.</param>
-        public VersionFoldersScriptProvider(string directoryPath, Encoding encoding, Func<string, bool> filter, string targetVersion)
+        [Obsolete("Use the constructor with Options argument instead")]
+        public VersionFoldersScriptProvider(string directoryPath, Encoding encoding, Func<string, bool> filter, string targetVersion) :
+            this(directoryPath, targetVersion, new FileSystemScriptOptions() { Filter = filter })
         {
+        }
+
+        ///<summary>
+        ///</summary>
+        ///<param name="directoryPath">Path to SQL upgrade scripts</param>
+        ///<param name="options">Different options for the file system script provider</param>
+        ///<param name="targetVersion">Exclude scripts in subfolders with a higher version number.</param>
+        public VersionFoldersScriptProvider(string directoryPath, string targetVersion, FileSystemScriptOptions options)
+        {
+            if (options == null)
+                throw new ArgumentNullException("options");
+
             this.directoryPath = directoryPath;
-            this.filter = filter;
-            this.encoding = encoding;
             this.targetVersion = targetVersion;
+            this.filter = options.Filter;
+            this.encoding = options.Encoding;
+            this.options = options;
         }
 
         /// <exception cref="InvalidOperationException">Thrown when multiple subfolder names parse to the same version number.</exception>
@@ -121,8 +123,9 @@ namespace DbUp.ScriptProviders
         /// <exception cref="InvalidOperationException">Thrown when an unparseable folder version is encountered, or when multiple subfolder names parse to the same version number.</exception>
         private IEnumerable<SqlScript> GetScriptsWithTargetVersion()
         {
-            var folderNames = Directory.GetDirectories(directoryPath)
-                .Select(d => new DirectoryInfo(d).Name);
+            var folderNames = 
+                Directory.GetDirectories(directoryPath)
+                    .Select(d => new DirectoryInfo(d).Name);
 
             // filter on folder names
             if (filter != null)
