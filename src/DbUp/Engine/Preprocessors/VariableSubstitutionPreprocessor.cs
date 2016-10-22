@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Collections.Specialized;
+using System.Linq;
 using System.Text.RegularExpressions;
+using DbUp.Helpers;
 
 namespace DbUp.Engine.Preprocessors
 {
@@ -11,7 +13,6 @@ namespace DbUp.Engine.Preprocessors
     public class VariableSubstitutionPreprocessor : IScriptPreprocessor
     {
         private readonly IDictionary<string, string> variables;
-        private static readonly Regex tokenRegex = new Regex(@"\$(?<variableName>\w+)\$");
 
         /// <summary>
         /// Initializes a new instance of the <see cref="VariableSubstitutionPreprocessor"/> class.
@@ -28,15 +29,10 @@ namespace DbUp.Engine.Preprocessors
         /// <param name="contents"></param>
         public string Process(string contents)
         {
-            return tokenRegex.Replace(contents, match => ReplaceToken(match, variables));
-        }
-
-        private static string ReplaceToken(Match match, IDictionary<string, string> variables)
-        {
-            var variableName = match.Groups["variableName"].Value;
-            if (!variables.ContainsKey(variableName))
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Variable {0} has no value defined", variableName));
-            return variables[variableName];
+            using (var parser = new VariableSubstitutionSqlParser(contents))
+            {
+                return parser.ReplaceVariables(variables);
+            }
         }
     }
 }

@@ -152,6 +152,16 @@ namespace DbUp.Engine.Preprocessors
         public VariableSubstitutionPreprocessor(System.Collections.Generic.IDictionary<string, string> variables) { }
         public string Process(string contents) { }
     }
+    public class VariableSubstitutionSqlParser : DbUp.Support.SqlServer.SqlParser
+    {
+        public VariableSubstitutionSqlParser(string sqlText, string delimiter = "GO", bool delimiterRequiresWhitespace = True) { }
+        protected override bool IsCustomStatement { get; }
+        protected virtual char VariableDelimiter { get; }
+        public event System.Action<string> ReadVariableName;
+        protected override void ReadCustomStatement() { }
+        public string ReplaceVariables(System.Collections.Generic.IDictionary<string, string> variables) { }
+        protected virtual bool ValidVariableNameCharacter(char c) { }
+    }
 }
 namespace DbUp.Engine.Transactions
 {
@@ -260,12 +270,23 @@ namespace DbUp.ScriptProviders
         public EmbeddedScriptsProvider(System.Reflection.Assembly[] assemblies, System.Func<string, bool> filter, System.Text.Encoding encoding) { }
         public System.Collections.Generic.IEnumerable<DbUp.Engine.SqlScript> GetScripts(DbUp.Engine.Transactions.IConnectionManager connectionManager) { }
     }
+    public class FileSystemScriptOptions
+    {
+        public FileSystemScriptOptions() { }
+        public System.Text.Encoding Encoding { get; set; }
+        public System.Func<string, bool> Filter { get; set; }
+        public bool IncludeSubDirectories { get; set; }
+    }
     public class FileSystemScriptProvider : DbUp.Engine.IScriptProvider
     {
         public FileSystemScriptProvider(string directoryPath) { }
+        [System.ObsoleteAttribute("Use the constructor with Options argument instead")]
         public FileSystemScriptProvider(string directoryPath, System.Func<string, bool> filter) { }
+        [System.ObsoleteAttribute("Use the constructor with Options argument instead")]
         public FileSystemScriptProvider(string directoryPath, System.Text.Encoding encoding) { }
+        [System.ObsoleteAttribute("Use the constructor with Options argument instead")]
         public FileSystemScriptProvider(string directoryPath, System.Func<string, bool> filter, System.Text.Encoding encoding) { }
+        public FileSystemScriptProvider(string directoryPath, DbUp.ScriptProviders.FileSystemScriptOptions options) { }
         public System.Collections.Generic.IEnumerable<DbUp.Engine.SqlScript> GetScripts(DbUp.Engine.Transactions.IConnectionManager connectionManager) { }
     }
     public sealed class StaticScriptProvider : DbUp.Engine.IScriptProvider
@@ -334,38 +355,19 @@ namespace DbUp.Support.SQLite
     public sealed class SQLiteTableJournal : DbUp.Support.SqlServer.SqlTableJournal
     {
         public SQLiteTableJournal(System.Func<DbUp.Engine.Transactions.IConnectionManager> connectionManager, System.Func<DbUp.Engine.Output.IUpgradeLog> logger, string table) { }
-        protected override string CreateTableSql(string tableName) { }
+        protected override string CreatePrimaryKeyName(string table) { }
+        protected override string CreateTableSql(string schema, string table) { }
+        protected override bool VerifyTableExistsCommand(System.Data.IDbCommand command, string tableName, string schemaName) { }
     }
 }
 namespace DbUp.Support.SqlServer
 {
     
-    public class SqlCommandReader : System.IO.StringReader
+    public class SqlCommandReader : DbUp.Support.SqlServer.SqlParser
     {
         protected const int FailedRead = -1;
         public SqlCommandReader(string sqlText, string delimiter = "GO", bool delimiterRequiresWhitespace = True) { }
-        protected char CurrentChar { get; }
-        protected int CurrentIndex { get; }
-        protected string Delimiter { get; set; }
-        protected bool DelimiterRequiresWhitespace { get; set; }
-        protected bool HasReachedEnd { get; }
-        protected virtual bool IsCustomStatement { get; }
-        protected bool IsEndOfLine { get; }
-        protected bool IsQuote { get; }
-        protected bool IsWhiteSpace { get; }
-        protected char LastChar { get; }
-        protected bool IsCharEqualTo(char comparisonChar, char compareTo) { }
-        protected bool IsCurrentCharEqualTo(char comparisonChar) { }
-        protected bool IsLastCharEqualTo(char comparisonChar) { }
-        protected char PeekChar() { }
-        public override int Read() { }
-        public override int Read(char[] buffer, int index, int count) { }
         public void ReadAllCommands(System.Action<string> handleCommand) { }
-        public override int ReadBlock(char[] buffer, int index, int count) { }
-        protected virtual void ReadCustomStatement() { }
-        public override string ReadLine() { }
-        public override string ReadToEnd() { }
-        protected bool TryPeek(int numberOfCharacters, out string result) { }
     }
     public class SqlCommandSplitter
     {
@@ -383,6 +385,47 @@ namespace DbUp.Support.SqlServer
         public static string QuoteSqlObjectName(string objectName) { }
         public static string QuoteSqlObjectName(string objectName, DbUp.Support.ObjectNameOptions objectNameOptions) { }
     }
+    public abstract class SqlParser : System.IO.StringReader
+    {
+        protected const int FailedRead = -1;
+        public SqlParser(string sqlText, string delimiter = "GO", bool delimiterRequiresWhitespace = True) { }
+        protected char CurrentChar { get; }
+        protected int CurrentIndex { get; }
+        protected string Delimiter { get; set; }
+        protected bool DelimiterRequiresWhitespace { get; set; }
+        protected bool HasReachedEnd { get; }
+        protected virtual bool IsCustomStatement { get; }
+        protected bool IsEndOfLine { get; }
+        protected bool IsQuote { get; }
+        protected bool IsWhiteSpace { get; }
+        protected char LastChar { get; }
+        public event System.Action CommandEnded;
+        public event System.Action CommandStarted;
+        public event System.Action<DbUp.Support.SqlServer.SqlParser.CharacterType, char> ReadCharacter;
+        protected bool IsCharEqualTo(char comparisonChar, char compareTo) { }
+        protected bool IsCurrentCharEqualTo(char comparisonChar) { }
+        protected bool IsLastCharEqualTo(char comparisonChar) { }
+        protected void OnReadCharacter(DbUp.Support.SqlServer.SqlParser.CharacterType type, char c) { }
+        protected void Parse() { }
+        protected char PeekChar() { }
+        public override int Read() { }
+        public override int Read(char[] buffer, int index, int count) { }
+        public override int ReadBlock(char[] buffer, int index, int count) { }
+        protected virtual void ReadCustomStatement() { }
+        public override string ReadLine() { }
+        public override string ReadToEnd() { }
+        protected bool TryPeek(int numberOfCharacters, out string result) { }
+        public enum CharacterType
+        {
+            Command = 0,
+            SlashStarComment = 1,
+            DashComment = 2,
+            BracketedText = 3,
+            QuotedString = 4,
+            Delimiter = 5,
+            CustomStatement = 6,
+        }
+    }
     public class SqlScriptExecutor : DbUp.Engine.IScriptExecutor
     {
         public SqlScriptExecutor(System.Func<DbUp.Engine.Transactions.IConnectionManager> connectionManagerFactory, System.Func<DbUp.Engine.Output.IUpgradeLog> log, string schema, System.Func<bool> variablesEnabled, System.Collections.Generic.IEnumerable<DbUp.Engine.IScriptPreprocessor> scriptPreprocessors) { }
@@ -396,10 +439,13 @@ namespace DbUp.Support.SqlServer
     public class SqlTableJournal : DbUp.Engine.IJournal
     {
         public SqlTableJournal(System.Func<DbUp.Engine.Transactions.IConnectionManager> connectionManager, System.Func<DbUp.Engine.Output.IUpgradeLog> logger, string schema, string table) { }
-        protected virtual string CreateTableSql(string tableName) { }
+        protected virtual string CreatePrimaryKeyName(string table) { }
+        protected virtual string CreateTableName(string schema, string table) { }
+        protected virtual string CreateTableSql(string schema, string table) { }
         public string[] GetExecutedScripts() { }
-        protected virtual string GetExecutedScriptsSql(string table) { }
+        protected virtual string GetExecutedScriptsSql(string schema, string table) { }
         public void StoreExecutedScript(DbUp.Engine.SqlScript script) { }
+        protected virtual bool VerifyTableExistsCommand(System.Data.IDbCommand command, string tableName, string schemaName) { }
     }
 }
 
@@ -415,7 +461,8 @@ public class static SqlServerExtensions
         "erScript() to manage connection behaviour")]
     public static DbUp.Builder.UpgradeEngineBuilder SqlDatabase(this DbUp.Builder.SupportedDatabases supported, System.Func<System.Data.IDbConnection> connectionFactory, string schema) { }
     public static void SqlDatabase(this DbUp.SupportedDatabasesForEnsureDatabase supported, string connectionString) { }
-    public static void SqlDatabase(this DbUp.SupportedDatabasesForEnsureDatabase supported, string connectionString, DbUp.Engine.Output.IUpgradeLog logger) { }
+    public static void SqlDatabase(this DbUp.SupportedDatabasesForEnsureDatabase supported, string connectionString, int commandTimeout) { }
+    public static void SqlDatabase(this DbUp.SupportedDatabasesForEnsureDatabase supported, string connectionString, DbUp.Engine.Output.IUpgradeLog logger, int timeout = -1) { }
 }
 public class static StandardExtensions
 {
@@ -447,6 +494,7 @@ public class static StandardExtensions
     public static DbUp.Builder.UpgradeEngineBuilder WithScriptsFromFileSystem(this DbUp.Builder.UpgradeEngineBuilder builder, string path, System.Func<string, bool> filter) { }
     public static DbUp.Builder.UpgradeEngineBuilder WithScriptsFromFileSystem(this DbUp.Builder.UpgradeEngineBuilder builder, string path, System.Text.Encoding encoding) { }
     public static DbUp.Builder.UpgradeEngineBuilder WithScriptsFromFileSystem(this DbUp.Builder.UpgradeEngineBuilder builder, string path, System.Func<string, bool> filter, System.Text.Encoding encoding) { }
+    public static DbUp.Builder.UpgradeEngineBuilder WithScriptsFromFileSystem(this DbUp.Builder.UpgradeEngineBuilder builder, string path, DbUp.ScriptProviders.FileSystemScriptOptions options) { }
     public static DbUp.Builder.UpgradeEngineBuilder WithScriptsFromVersionFolders(this DbUp.Builder.UpgradeEngineBuilder builder, string path) { }
     public static DbUp.Builder.UpgradeEngineBuilder WithScriptsFromVersionFolders(this DbUp.Builder.UpgradeEngineBuilder builder, string path, string targetVersion) { }
     public static DbUp.Builder.UpgradeEngineBuilder WithScriptsFromVersionFolders(this DbUp.Builder.UpgradeEngineBuilder builder, string path, System.Text.Encoding encoding, string targetVersion) { }

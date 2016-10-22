@@ -96,6 +96,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Engine\VariableSubstitutionPreprocessorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="App_Packages\ApiApprover.3.0.1\PublicApiApprover.cs" />
     <Compile Include="App_Packages\ApiApprover.3.0.1\PublicApiGenerator.cs" />
@@ -105,6 +106,7 @@
     <Compile Include="Helpers\FilterFactoryTests.cs" />
     <Compile Include="Helpers\NullJournalTests.cs" />
     <Compile Include="ScriptProvider\VersionFoldersScriptProviderTests.cs" />
+    <Compile Include="ScriptProvider\TestScripts.cs" />
     <Compile Include="TestInfrastructure\Scrubbers.cs" />
     <Compile Include="Support\MySql\MySqlConnectionManagerTests.cs" />
     <Compile Include="Support\MySql\MySqlSupportTests.cs" />
@@ -173,6 +175,10 @@
     <Content Include="TestFilterFiles\ScriptNames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="TestScripts\Folder1\Test2__9.sql" />
+    <EmbeddedResource Include="TestScripts\Folder1\Test1__9.sql" />
+    <EmbeddedResource Include="TestScripts\Folder2\Test1__1.sql" />
+    <EmbeddedResource Include="TestScripts\Folder2\Test2__1.sql" />
     <EmbeddedResource Include="TestScripts\Script20130525_2_Test5.sql" />
     <EmbeddedResource Include="TestScripts\Script20130525_1_Test5.sql" />
   </ItemGroup>

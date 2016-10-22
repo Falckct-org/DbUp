@@ -7,7 +7,9 @@ Start by creating a simple C# console project in Visual Studio, and adding your 
 
 Next, use NuGet to install the DbUp package:
 
- > Install-Package DbUp
+```
+Install-Package DbUp
+```
 
 Finally, in `Program.cs`, add the following code:
 
@@ -44,6 +46,14 @@ static int Main(string[] args)
     return 0;
 }
 ```
+**Note**: If you want your application to create the database for you, add the following line after the connection string:
+
+```
+EnsureDatabase.For.SqlDatabase(connectionString);
+```
+
+This way it will check if the target database exist if not it will create the database and then run your scripts  
+
 
 You now have a console application that can run change scripts against your database! After running it, you'll see something like this:
 ![First run - the scripts get executed](./images/first-run.png)
